@@ -1,0 +1,82 @@
+Posible Main ejemplo: 
+//Una huella registrada → abre puerta.
+
+Doble toque → pide validación RFID.
+
+Si RFID es válida → muestra menú en el LCD.//
+
+from pyfingerprint.pyfingerprint import PyFingerprint
+from rfid_reader import check_rfid
+from display import lcd_message
+from finger_utils import wait_for_fingerprint_touch, detect_double_touch, detect_long_touch
+from finger_utils import enroll_fingerprint, search_fingerprint, delete_fingerprint
+
+import time
+import sys
+
+# Inicialización del sensor de huellas
+try:
+    f = PyFingerprint('/dev/serial0', 57600, 0xFFFFFFFF, 0x00000000)
+    if not f.verifyPassword():
+        raise ValueError('Contraseña incorrecta del sensor R307')
+except Exception as e:
+    print('Error al iniciar sensor de huellas:')
+    print(e)
+    sys.exit(1)
+
+def open_door():
+    print("Puerta abierta!")  # Acá deberías activar un relay o LED
+    lcd_message("Acceso concedido", "¡Puerta abierta!")
+    time.sleep(3)
+
+def admin_menu():
+    opciones = ["1. Registrar huella", "2. Buscar huella", "3. Eliminar huella", "4. Salir"]
+    indice = 0
+    while True:
+        lcd_message("== MENÚ ADMIN ==", opciones[indice])
+        print(opciones[indice])
+
+        toque = wait_for_fingerprint_touch()
+
+        if detect_long_touch(f):
+            # Seleccionar opción
+            if indice == 0:
+                enroll_fingerprint(f)
+            elif indice == 1:
+                search_fingerprint(f)
+            elif indice == 2:
+                delete_fingerprint(f)
+            elif indice == 3:
+                lcd_message("Saliendo...", "")
+                break
+        elif detect_double_touch(f):
+            indice = (indice + 1) % len(opciones)
+
+def main_loop():
+    lcd_message("Esperando huella", "")
+    while True:
+        if wait_for_fingerprint_touch():
+            if detect_double_touch(f):
+                lcd_message("Modo admin", "Aproxime llave RFID")
+                print("Esperando RFID...")
+
+                if check_rfid():
+                    lcd_message("RFID válida", "Acceso al menú")
+                    admin_menu()
+                    lcd_message("Esperando huella", "")
+                else:
+                    lcd_message("RFID inválida", "Acceso denegado")
+                    time.sleep(2)
+            else:
+                # Modo usuario normal
+                f.convertImage(0)
+                result = f.searchTemplate()
+                if result[0] != -1:
+                    open_door()
+                else:
+                    lcd_message("Acceso denegado", "Huella no reconocida")
+                    time.sleep(2)
+                    lcd_message("Esperando huella", "")
+
+if __name__ == '__main__':
+    main_loop()

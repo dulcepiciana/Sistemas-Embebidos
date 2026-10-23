@@ -1,0 +1,26 @@
+Prueba para display
+import time
+import board
+import busio
+from adafruit_character_lcd.character_lcd_i2c import Character_LCD_I2C
+
+# Inicializar bus I2C
+i2c = busio.I2C(board.SCL, board.SDA)
+
+# Definir tamaño del display
+lcd_columns = 20
+lcd_rows = 4
+
+# Inicializar LCD por I2C
+lcd = Character_LCD_I2C(i2c, lcd_columns, lcd_rows)
+
+# Prueba de texto
+lcd.clear()
+lcd.message = "Hola!\nDisplay WH2004A\npor I2C\nAdafruit LCD :)"
+time.sleep(5)
+
+lcd.clear()
+lcd.message = "Listo para integrar\nal proyecto :)"
+time.sleep(3)
+
+lcd.clear()
